@@ -6,6 +6,9 @@ from utils.utils import get_extention, is_categorical
 from loguru import logger
 from utils.exceptions import *
 from utils.h2o_utils import train, validate
+import json
+import os
+import subprocess
 
 class AutoTrainer:
     '''Trainer to import, preprocess and make data model ready based on parameters, and also initiate training'''
@@ -28,6 +31,7 @@ class AutoTrainer:
         self.categorical_features = []
         self.task = task
         self.label_map = {}
+        self.impute_values = {}
 
     def set_label(self, colname):
         '''Method to set the training label to the input column name'''
@@ -73,6 +77,7 @@ class AutoTrainer:
                         cat = is_categorical(series)
                         if cat:
                             mode = series.value_counts().index[0]
+                            self.impute_values[col] = mode
                             self.categorical_features.append(col)
                             self.features.append(col)
                             if series.isna().sum() > 0:
@@ -80,7 +85,6 @@ class AutoTrainer:
                                 self.data[col+'_imputed'] = na_flag
                                 self.features.append(col+'_imputed')
                                 self.data[col] = self.data[col].fillna(mode)
-                                
                         else:
                             try:
                                 series.astype(np.float64)
@@ -88,6 +92,7 @@ class AutoTrainer:
                                 logger.warning(f'Found invalid datatype in {col} column. Ignoring this column')
                                 continue
                             mean = np.mean(series)
+                            self.impute_values[col] = mean
                             self.features.append(col)
                             if series.isna().sum() > 0:
                                 na_flag = (series.isna()).astype(int)
@@ -109,13 +114,25 @@ class AutoTrainer:
                 raise ColumnNotFound(f'Column {col} not found in the dataframe')
         self.categorical_features = columns
 
-    def initiate(self, runtime=60, index_column=None):
+    def initiate(self, runtime=60, index_column=None, host="0.0.0.0", port="8898"):
         '''Initialise the training and deployment processes
             Inputs:
                 runtime -> Maximum runtime of model training in seconds
                 index_column -> ID Column within the dataframe if there is any
+                host -> Host IP address for deployment
+                port -> Host port for deployment
         '''
         model_path, metrics = train(self.data, self.label, id_column=index_column, max_runtime=runtime)
+        config = {'model_path' : model_path, 'index': index_column, 'features': self.features, 'columns': self.columns, 'label': self.label}
+        json.dump(config, 'config/model_config.json')
+        json.dump(self.impute_values, 'config/data_constants.json')
+
+        # Initiate fastapi app
+        os.environ['APP_HOST'] = host
+        os.environ['APP_PORT'] = port
+
+        sp = subprocess.Popen(['utils/start.sh'], shell=True)
+
         return model_path, metrics    
     
 
