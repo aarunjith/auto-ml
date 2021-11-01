@@ -1,13 +1,13 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from ..utils.h2o_utils import validate
+from utils.h2o_utils import validate
 import pandas as pd
 from loguru import logger
 import json
 
-with open('../config/model_config.json', r) as f:
+with open('config/model_config.json', r) as f:
     config = json.load(f)
-with open('../config/data_constants.json', r) as f:
+with open('config/data_constants.json', r) as f:
     data_constants = json.load(f)
 
 columns = [col for col in config['columns'] if col != config['label']]
