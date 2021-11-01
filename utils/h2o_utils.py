@@ -2,7 +2,7 @@ import h2o
 from h2o.automl import H2OAutoML
 import pandas as pd
 
-h2o.init(max_mem_size="16G")
+h2o.init(max_mem_size="8G")
 
 def train(data, target_variable, id_column=None, max_runtime=30):
     # Split into train and validation

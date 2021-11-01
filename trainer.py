@@ -10,8 +10,18 @@ from utils.h2o_utils import train, validate
 class AutoTrainer:
     '''Trainer to import, preprocess and make data model ready based on parameters, and also initiate training'''
     def __init__(self, datapath, task) -> None:
+        '''
+        Initialise AutoTrainer
+        Inputs:
+            datapath -> Filepath to the training data. Currently only supports csv
+            task -> "classify" for classification. Any other value is considered regression
+        
+        '''
         if get_extention(datapath) == 'csv':
             self.data = pd.read_csv(datapath)
+        else:
+            raise NotImplementedError('File extention is not supported')
+            self.data = None
         self.columns = self.data.columns
         self.label = None
         self.features = []
@@ -63,20 +73,30 @@ class AutoTrainer:
                         cat = is_categorical(series)
                         if cat:
                             mode = series.value_counts().index[0]
-                            na_flag = (series.isna()).astype(int)
-                            self.data[col] = self.data[col].fillna(mode)
-                            self.data[col+'_imputed'] = na_flag
                             self.categorical_features.append(col)
                             self.features.append(col)
+                            if series.isna().sum() > 0:
+                                na_flag = (series.isna()).astype(int)
+                                self.data[col+'_imputed'] = na_flag
+                                self.features.append(col+'_imputed')
+                                self.data[col] = self.data[col].fillna(mode)
+                                
                         else:
+                            try:
+                                series.astype(np.float64)
+                            except:
+                                logger.warning(f'Found invalid datatype in {col} column. Ignoring this column')
+                                continue
                             mean = np.mean(series)
-                            na_flag = (series.isna()).astype(int)
-                            self.data[col] = self.data[col].fillna(mean)
-                            self.data[col+'_imputed'] = na_flag
                             self.features.append(col)
+                            if series.isna().sum() > 0:
+                                na_flag = (series.isna()).astype(int)
+                                self.data[col+'_imputed'] = na_flag
+                                self.features.append(col+'_imputed')
+                                self.data[col] = self.data[col].fillna(mean)
 
-            logger.info('Shortlisting selected features')
-            self.data = self.data[self.features]
+            logger.info('Shortlisting selected features and extracting labels')
+            self.data = self.data[self.features + [self.label]]
 
             logger.info('Imputed and flagged missing data')
             logger.info(f'Categorical Columns Identified : {self.categorical_features}')

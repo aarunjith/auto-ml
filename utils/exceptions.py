@@ -4,3 +4,6 @@ class ColumnNotFound(Exception):
 
 class LabelNotSet(Exception):
     pass
+
+class NotImplementedError(Exception):
+    pass
