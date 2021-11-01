@@ -123,7 +123,7 @@ class AutoTrainer:
                 port -> Host port for deployment
         '''
         model_path, metrics = train(self.data, self.label, id_column=index_column, max_runtime=runtime)
-        config = {'model_path' : model_path, 'index': index_column, 'features': list(self.features), 'columns': list(self.columns), 'label': self.label}
+        config = {'model_path' : model_path, 'index': index_column, 'features': list(self.features), 'columns': list(self.columns), 'label': self.label, 'label_map': self.label_map}
         with open('config/model_config.json', 'w') as fp:
             json.dump(config, fp)
         with open('config/data_constants.json', 'w') as fp:

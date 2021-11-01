@@ -1,19 +1,21 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from utils.h2o_utils import validate
+from utils.utils import convert_label_map
 import pandas as pd
 from loguru import logger
 import json
 
-with open('config/model_config.json', r) as f:
+with open('config/model_config.json', 'r') as f:
     config = json.load(f)
-with open('config/data_constants.json', r) as f:
+with open('config/data_constants.json', 'r') as f:
     data_constants = json.load(f)
 
 columns = [col for col in config['columns'] if col != config['label']]
 model_path = config['model_path']
 id_column = config['index']
 features = config['features']
+label_map = config['label_map']
 
 app = FastAPI()
 
@@ -47,4 +49,5 @@ async def validate_performance(input: Request):
         predictions = validate(data, model_path, id_column)
     else:
         predictions = validate(data, model_path)
-    return {"predictions": predictions.to_dict(orient="records")}
+    predictions = convert_label_map(predictions.to_dict(orient="records"), label_map=label_map)
+    return {"predictions": predictions}
