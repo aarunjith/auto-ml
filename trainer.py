@@ -77,7 +77,7 @@ class AutoTrainer:
                         cat = is_categorical(series)
                         if cat:
                             mode = series.value_counts().index[0]
-                            self.impute_values[col] = mode
+                            self.impute_values[col] = str(mode)
                             self.categorical_features.append(col)
                             self.features.append(col)
                             if series.isna().sum() > 0:
@@ -92,7 +92,7 @@ class AutoTrainer:
                                 logger.warning(f'Found invalid datatype in {col} column. Ignoring this column')
                                 continue
                             mean = np.mean(series)
-                            self.impute_values[col] = mean
+                            self.impute_values[col] = int(mean)
                             self.features.append(col)
                             if series.isna().sum() > 0:
                                 na_flag = (series.isna()).astype(int)
@@ -123,14 +123,17 @@ class AutoTrainer:
                 port -> Host port for deployment
         '''
         model_path, metrics = train(self.data, self.label, id_column=index_column, max_runtime=runtime)
-        config = {'model_path' : model_path, 'index': index_column, 'features': self.features, 'columns': self.columns, 'label': self.label}
-        json.dump(config, 'config/model_config.json')
-        json.dump(self.impute_values, 'config/data_constants.json')
-
+        config = {'model_path' : model_path, 'index': index_column, 'features': list(self.features), 'columns': list(self.columns), 'label': self.label}
+        with open('config/model_config.json', 'w') as fp:
+            json.dump(config, fp)
+        with open('config/data_constants.json', 'w') as fp:
+            json.dump(self.impute_values, fp)
+            
         # Initiate fastapi app
         os.environ['APP_HOST'] = host
         os.environ['APP_PORT'] = port
-
+        
+        subprocess.Popen(['chmod +x ./utils/start.sh'], shell=True)
         sp = subprocess.Popen(['utils/start.sh'], shell=True)
 
         return model_path, metrics    

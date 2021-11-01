@@ -5,8 +5,11 @@ import pandas as pd
 from loguru import logger
 import json
 
-config = json.load('../config/model_config.json')
-data_constants = json.load('../config/data_constants.json')
+with open('../config/model_config.json', r) as f:
+    config = json.load(f)
+with open('../config/data_constants.json', r) as f:
+    data_constants = json.load(f)
+
 columns = [col for col in config['columns'] if col != config['label']]
 model_path = config['model_path']
 id_column = config['index']
